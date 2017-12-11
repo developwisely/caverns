@@ -1,0 +1,25 @@
+<link href="css/main.css" rel="stylesheet" type="text/css">
+
+
+<div class="container">
+	<div class="grid">
+		<table>
+			<tbody>
+				<!-- ko foreach: { data: overworld.board, as: 'row' } -->
+				<tr>
+					<!-- ko foreach: { data: row, as: 'column'} -->
+					<td data-bind="css: { wall: column.isWall, treasure: column.treasure }">
+						<div class="empty"></div>
+					</td>
+					<!-- /ko -->
+				</tr>
+				<!-- /ko -->
+			</tbody>
+		</table>
+	</div>
+</div>
+
+
+<script type="text/javascript" src="js/lib/jquery-3.1.1.min.js"></script>
+<script type="text/javascript" src="js/lib/knockout-3.4.1.js"></script>
+<script type="text/javascript" src="js/caverns.js"></script>
