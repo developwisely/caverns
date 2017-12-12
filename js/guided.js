@@ -18,6 +18,7 @@
         self = this;
 
 		self.board = [];
+		self.chunkSet = [];
 
         self.settings = {
             height: 10,
@@ -65,10 +66,12 @@
 			// Run path algorithm
 			self.SetPaths();
 
+			// Set all the cells in the chunks to their values
 			self.SetStatusOfCells();
-			// set all cells within chunks true/false values
-				// for....
-				
+
+
+			//debug
+			self.Draw();
 				
 			// run random caverns.js cellular automata on map
 				// CAVES!!!
@@ -150,7 +153,48 @@
 
 		// Sets the status of the cells within the path chunks
 		self.SetStatusOfCells = function() {
+			var multiplierX = 1,
+				multiplierY = 1;
 			
+			var cellsPerChunkX = Math.floor(self.settings.width / self.settings.numChunks),
+				cellsPerChunkY = Math.floor(self.settings.width / self.settings.numChunks);
+
+			for (var cY = 0; cY < self.chunkSet.length; cY++) {
+				for (var cX = 0; cX < self.chunkSet[cY].length; cX++) {
+					
+					var startingX = cellsPerChunkX * cX,
+						startingY = cellsPerChunkY * cY;
+
+					//console.log('STARTING -- x: ' + startingX + ' y: ' + startingY);
+					//console.log('CELLS PER -- x: ' + cellsPerChunkX * multiplierX + ' y: ' + cellsPerChunkY * multiplierY)
+
+					for (var bY = startingY; bY < cellsPerChunkY * multiplierY; bY++) {
+						for (var bX = startingX; bX < cellsPerChunkX * multiplierX; bX++) {
+							//console.log('x: ' + bX + ' y: ' + bY);
+
+							for (var cell in self.board) {
+								if (self.board[cell].x !== bX || self.board[cell].y !== bY) continue;
+
+								if (self.chunkSet[cY][cX] === chunkStatus.PATH ||
+									self.chunkSet[cY][cX] === chunkStatus.ENTRANCE ||
+									self.chunkSet[cY][cX] === chunkStatus.EXIT) {
+										self.board[cell].state = false;
+								} else {
+									self.board[cell].state = true;
+								}	
+							}
+						}
+					}
+
+					if (multiplierX === self.settings.numChunks) {
+						multiplierX = 1;
+					} else {
+						multiplierX++;
+					}
+				}
+
+				multiplierY++;
+			}
 		};
 
 	
