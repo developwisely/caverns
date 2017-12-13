@@ -24,7 +24,7 @@
             height: 100,
             width: 100,
             displaySize: 1,
-			numChunks: 5,
+			numChunks: 4,
 			percentWalls: 0.4,
 			iterations: 3
         };
@@ -68,6 +68,12 @@
 			self.entranceChunk = self.GetEntranceChunk();
 			self.exitChunk = self.GetExitChunk();
 
+			// Set blockers for more unique paths
+			var blockers = Math.floor(Math.random()*((self.settings.numChunks-1)-1+1)+1);
+			for (var q = 0; q < blockers; q++) {
+				self.SetBlocker();
+			}
+
 			// Run path algorithm
 			self.SetPaths();
 			// possibly add random blocked chunks to get more unique paths?
@@ -80,8 +86,58 @@
 			// Build out the caverns
 			self.BuildCaverns();
 
+			// Place treasure
+			self.PlaceTreasure();
+
 			//debug
 			self.Draw();
+		};
+
+
+		// Places treasure in the caves
+		self.PlaceTreasure = function() {
+			// higher = more rare
+			var treasureHiddenLimit = 4;
+			
+			for (var y = 0; y < self.rows; y++) {
+				for (var x = 0; x < self.cols; x++) {
+					if (self.board[y][x].state !== cellState.WALL) {
+						if (self.GetAdjacentWalls(x, y, 1, 1) >= treasureHiddenLimit &&
+							!self.IsTreasureAround(x, y, 35)) {
+							self.board[y][x].state = cellState.TREASURE;
+						}
+					}
+				}
+			}
+		};
+
+		// Checks if a treasure cell is within 'inc' of x, y
+		self.IsTreasureAround = function(x, y, inc) {
+            var startX = x - inc,
+                startY = y - inc,
+                endX = x + inc,
+                endY = y + inc;
+
+            var iX = startX,
+                iY = startY,
+                isTreasureAround = false;
+            
+            for (var rY = iY; rY <= endY; rY++) {
+                for (var rX = iX; rX <= endX; rX++) {
+                    if (this.IsTreasure(rX, rY))
+                        isTreasureAround = true;
+                }
+            }
+
+            return isTreasureAround;
+        };
+
+
+		// Check if the x, y coordinate is treasure
+        self.IsTreasure = function(x, y) {
+            if (self.IsOutOfBounds(x, y)) return false;
+
+            return self.board[y][x].state === cellState.TREASURE;
 		};
 
 
@@ -226,12 +282,29 @@
 				var dX = Math.abs(posX - self.entranceChunk.x),
 					dY = Math.abs(posY - self.entranceChunk.y);
 				
-				if ((dX > 3 && dY > 0) || (dX > 0 && dY > 3)) isValid = true;
+				if ((dX > self.settings.numChunks - 2 && dY > 0) || (dX > 0 && dY > self.settings.numChunks - 2)) isValid = true;
 			}
 
 			self.chunkSet[posY][posX] = chunkStatus.EXIT;
 
 			return { x: posX, y: posY };
+		};
+
+
+		// Sets a random blocker cell
+		self.SetBlocker = function() {
+			var isValid = false;
+
+			while (!isValid) {
+				var posX = Math.floor(Math.random() * self.settings.numChunks),
+					posY = Math.floor(Math.random() * self.settings.numChunks);
+			
+				if (self.chunkSet[posY][posX] !== chunkStatus.BLOCKED &&
+					self.chunkSet[posY][posX] !== chunkStatus.ENTRANCE &&
+					self.chunkSet[posY][posX] !== chunkStatus.EXIT) isValid = true;
+			}
+
+			self.chunkSet[posY][posX] = chunkStatus.BLOCKED;
 		};
 
 
@@ -445,7 +518,8 @@
 				
 				switch(this.state) {
 					case cellState.WALL:
-						self.ctx.fillStyle = '#666';
+						//self.ctx.fillStyle = '#666';
+						self.ctx.fillStyle = '#000';
 						break;
 					
 					case cellState.FLOOR:
@@ -453,7 +527,7 @@
 						break;
 
 					case cellState.TREASURE:
-						self.ctx.fillStyle = '#f00';
+						self.ctx.fillStyle = '#A5E640';
 						break;
 				}
 				
