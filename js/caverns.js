@@ -8,7 +8,7 @@
 		{
             chance: 0.42,
             iterations: 3,
-			width: Math.floor(Math.random()*(100-30+1)+30),
+            width: Math.floor(Math.random()*(100-30+1)+30),
 			height: Math.floor(Math.random()*(100-30+1)+30)
 		},
 
