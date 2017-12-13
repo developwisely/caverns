@@ -64,24 +64,18 @@
 				}
 			}
 
+			// Set blockers
+			self.SetBlockers();
+
 			// Get entrance and exit points
 			self.entranceChunk = self.GetEntranceChunk();
 			self.exitChunk = self.GetExitChunk();
 
-			// Set blockers for more unique paths
-			var blockers = Math.floor(Math.random()*((self.settings.numChunks-1)-1+1)+1);
-			for (var q = 0; q < blockers; q++) {
-				self.SetBlocker();
-			}
-
 			// Run path algorithm
 			self.SetPaths();
-			// possibly add random blocked chunks to get more unique paths?
-
 
 			// Set all the cells in the chunks to their values
 			self.SetStatusOfCells();
-
 
 			// Build out the caverns
 			self.BuildCaverns();
@@ -291,25 +285,25 @@
 		};
 
 
-		// Sets a random blocker cell
-		self.SetBlocker = function() {
-			var isValid = false;
+		// Sets blockers in corner and middle of chunk board
+		self.SetBlockers = function() {
+			self.chunkSet[0][0] = chunkStatus.BLOCKED;
+			self.chunkSet[self.chunkSet.length - 1][0] = chunkStatus.BLOCKED;
+			self.chunkSet[self.chunkSet.length - 1][self.chunkSet.length - 1] = chunkStatus.BLOCKED;
+			self.chunkSet[0][self.chunkSet.length - 1] = chunkStatus.BLOCKED;
 
-			while (!isValid) {
-				var posX = Math.floor(Math.random() * self.settings.numChunks),
-					posY = Math.floor(Math.random() * self.settings.numChunks);
+			var mid = Math.ceil(self.settings.numChunks / 2);
+
+			var posX = mid - Math.round(Math.random()),
+				posY = mid - Math.round(Math.random());
 			
-				if (self.chunkSet[posY][posX] !== chunkStatus.BLOCKED &&
-					self.chunkSet[posY][posX] !== chunkStatus.ENTRANCE &&
-					self.chunkSet[posY][posX] !== chunkStatus.EXIT) isValid = true;
-			}
-
 			self.chunkSet[posY][posX] = chunkStatus.BLOCKED;
 		};
 
 
 		// Sets the shortest path from entrance to exit
 		self.SetPaths = function() {
+
 			// Get path between them
 			var path = self.FindShortestPath(self.entranceChunk, self.chunkSet);
 			
