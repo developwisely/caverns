@@ -21,10 +21,12 @@
 		self.chunkSet = [];
 
         self.settings = {
-            height: 10,
-            width: 10,
+            height: 100,
+            width: 100,
             displaySize: 1,
-            numChunks: 5
+			numChunks: 5,
+			percentWalls: 0.4,
+			iterations: 3
         };
 
         self.Init = function(canvas) {
@@ -36,10 +38,13 @@
             self.cols = Math.floor(self.settings.width / self.settings.displaySize);  // x
             self.rows = Math.floor(self.settings.height / self.settings.displaySize); // y
 
+			self.board = new Array(self.rows);
+
 			for (var y = 0; y < self.rows; y++) {
+				self.board[y] = new Array(self.cols);
 				for (var x = 0; x < self.cols; x++) {
 					var cell = new Cell(x, y);
-					self.board.push(cell);
+					self.board[y][x] = cell;
 				}
 			}
 
@@ -65,17 +70,129 @@
 
 			// Run path algorithm
 			self.SetPaths();
+			// possibly add random blocked chunks to get more unique paths?
+
 
 			// Set all the cells in the chunks to their values
 			self.SetStatusOfCells();
 
 
+			// Build out the caverns
+			self.BuildCaverns();
+
 			//debug
 			self.Draw();
-				
-			// run random caverns.js cellular automata on map
-				// CAVES!!!
 		};
+
+
+		// Starts the process of building caverns on the map
+		self.BuildCaverns = function() {
+
+			// Set the cell states
+			for (var y = 0; y < self.board.length; y++) {
+				for (var x = 0; x < self.board[y].length; x++) {
+					if (self.board[y][x].state === cellState.WALL) continue;
+
+					self.board[y][x].state = self.GetRandomState();
+				}
+			}
+			
+			// Iterate to build out the caverns
+			for (var i = 0; i < self.settings.iterations; i++) {
+				self.board = self.RefineCaverns(self.board);
+			}
+		};
+
+
+		// Refines the caverns with cellular automata rules
+		self.RefineCaverns = function(map) {
+			var newMap = new Array(self.rows);
+			
+			for (var y = 0; y < newMap.length; y++) {
+				newMap[y] = new Array(self.cols);
+
+				for (var x = 0; x < newMap[y].length; x++) {
+					var cell = new Cell(x, y);
+					cell.state = self.CellularStateLogic(x, y);
+					
+					newMap[y][x] = cell;
+				}
+			}
+
+			return newMap;
+		};
+
+
+		// Runs cellular automata rules
+		self.CellularStateLogic = function(x, y) {
+			var numWalls = this.GetAdjacentWalls(x, y, 1, 1);
+
+			if (self.board[y][x].state === cellState.WALL) {
+				if (numWalls > 3) {
+					return cellState.WALL;
+				} else if (numWalls < 2) {
+					return cellState.FLOOR;
+				}
+			} else {
+				if (numWalls > 4) {
+					return cellState.WALL;
+				}
+			}
+
+			return cellState.FLOOR;
+		};
+
+
+		// Gets adjacent cell wall count
+		this.GetAdjacentWalls = function(x, y, incX, incY) {
+            var startX = x - incX,
+                startY = y - incY,
+                endX = x + incX,
+                endY = y + incY;
+
+            var iX = startX,
+                iY = startY,
+                wallCounter = 0;
+
+            for (var rY = iY; rY <= endY; rY++) {
+                for (var rX = iX; rX <= endX; rX++) {
+                    if (rX == x && rY == y) continue;
+
+                    if (this.IsWall(rX, rY)) {
+                        wallCounter++;
+                    }
+                }
+            }
+
+            return wallCounter;
+		};
+
+
+		// Checks if passed x, y coordinate cell is a wall
+		self.IsWall = function(x, y) {
+            if (self.IsOutOfBounds(x, y)) return true;
+
+            return self.board[y][x].state === cellState.WALL;
+		};
+		
+
+		// Checks if passed x, y coordinate is out of bounds
+		self.IsOutOfBounds = function(x, y) {
+            if (x < 0 || x > self.board.length - 1 || y < 0 || y > self.board.length - 1) return true;
+            
+            return false;
+        };
+
+
+		// Gets a random state for the cell
+		self.GetRandomState = function() {
+			if (Math.random() < self.settings.percentWalls) {
+				return cellState.WALL;
+			}
+
+			return cellState.FLOOR;
+		};
+
 
 	
 		// Pulls a random chunk for entrance
@@ -101,7 +218,7 @@
 		self.GetExitChunk = function() {
 			var isValid = false;
 
-			// Exit must be at least 3 blocks away from entrance
+			// Exit must be at least 2 blocks away from entrance
 			while (!isValid) {
 				var posX = Math.floor(Math.random() * self.settings.numChunks),
 					posY = Math.floor(Math.random() * self.settings.numChunks);
@@ -109,7 +226,7 @@
 				var dX = Math.abs(posX - self.entranceChunk.x),
 					dY = Math.abs(posY - self.entranceChunk.y);
 				
-				if (dX > 3 || dY > 3) isValid = true;
+				if ((dX > 3 && dY > 0) || (dX > 0 && dY > 3)) isValid = true;
 			}
 
 			self.chunkSet[posY][posX] = chunkStatus.EXIT;
@@ -172,16 +289,12 @@
 						for (var bX = startingX; bX < cellsPerChunkX * multiplierX; bX++) {
 							//console.log('x: ' + bX + ' y: ' + bY);
 
-							for (var cell in self.board) {
-								if (self.board[cell].x !== bX || self.board[cell].y !== bY) continue;
-
-								if (self.chunkSet[cY][cX] === chunkStatus.PATH ||
-									self.chunkSet[cY][cX] === chunkStatus.ENTRANCE ||
-									self.chunkSet[cY][cX] === chunkStatus.EXIT) {
-										self.board[cell].state = false;
-								} else {
-									self.board[cell].state = true;
-								}	
+							if (self.chunkSet[cY][cX] === chunkStatus.PATH ||
+								self.chunkSet[cY][cX] === chunkStatus.ENTRANCE ||
+								self.chunkSet[cY][cX] === chunkStatus.EXIT) {
+									self.board[bY][bX].state = cellState.FLOOR;
+							} else {
+								self.board[bY][bX].state = cellState.WALL;
 							}
 						}
 					}
@@ -199,8 +312,10 @@
 
 	
 		self.Draw = function() {
-			for (var c = 0; c < self.board.length; c++) {
-				self.board[c].Show();
+			for (var y = 0; y < self.board.length; y++) {
+				for (var x = 0; x < self.board[y].length; x++) {
+					self.board[y][x].Show();
+				}
 			}
 		};
 
@@ -309,12 +424,17 @@
 
 
 
+		var cellState = {
+			WALL: 0,
+			FLOOR: 1,
+			TREASURE: 2
+		}
 
 		function Cell(x, y) {
 			this.x = x;
 			this.y = y;
 
-			this.state = false;
+			this.state = cellState.FLOOR;
 
 			this.Show = function() {
 				var xPos = this.x * self.settings.displaySize,
@@ -323,15 +443,23 @@
 				self.ctx.beginPath();
 				self.ctx.rect(xPos, yPos, self.settings.displaySize, self.settings.displaySize);
 				
-				if (this.state) {
-					self.ctx.fillStyle = '#333';
-				} else {
-					self.ctx.fillStyle = '#666';
+				switch(this.state) {
+					case cellState.WALL:
+						self.ctx.fillStyle = '#666';
+						break;
+					
+					case cellState.FLOOR:
+						self.ctx.fillStyle = '#333';
+						break;
+
+					case cellState.TREASURE:
+						self.ctx.fillStyle = '#f00';
+						break;
 				}
 				
 				self.ctx.fill();
 				self.ctx.closePath();
-			}
+			};
 		};
     }
 
