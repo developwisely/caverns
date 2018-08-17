@@ -1,6 +1,6 @@
 # Caverns
 
-The following repo is a test for generating random caverns for game development use.
+The following repo is a prototype for generating random caverns for game development use.
 
 ### Cellular Automata (index.html)
 This is the basic way of generating large open caverns. It doesn't quite serve what I'm looking for, but useful possibly for overworlds.
